@@ -8,11 +8,11 @@ from collections import defaultdict
 from collections import OrderedDict
 import functools
 import json
-import operator
 import os
 import sys
 import webbrowser
 import code
+import textwrap
 import time
 
 from contextlib import contextmanager
@@ -22,6 +22,7 @@ import click
 import pkg_resources
 import requests
 from plaintable import Table
+from terminaltables import SingleTable
 from rst2ansi import rst2ansi
 from jinja2 import Environment
 from jinja2 import PackageLoader
@@ -977,25 +978,35 @@ org.add_command(org_scratch_delete)
 # Commands for group: task
 
 
+def _table_wrapper(table, index=1):
+    # query for column width and wrap text
+    width = table.column_max_width(index)
+    for row in table.table_data:
+        row[index] = textwrap.fill(row[index], width) if row[index] is not None else ""
+
+
 @click.command(name="list", help="List available tasks for the current context")
 @pass_config(load_keychain=False)
 def task_list(config):
-    data = []
-    headers = ["task", "description"]
     task_groups = OrderedDict()
+
     for task in config.project_config.list_tasks():
         group = task["group"] or "Other"
         if group not in task_groups:
             task_groups[group] = []
-        task_groups[group].append(task)
+        task_groups[group].append(
+            [click.style(task["name"], underline=True), task["description"]]
+        )
+
     for group, tasks in task_groups.items():
-        data.append(("", ""))
-        data.append(("-- {} --".format(group), ""))
-        for task in sorted(tasks, key=operator.itemgetter("name")):
-            data.append((task["name"], task["description"]))
-    table = Table(data, headers)
-    click.echo(table)
-    click.echo("")
+        data = [["Task", "Description"]]
+        data.extend(sorted(tasks))
+        table = SingleTable(data, click.style(group, bold=True, underline=True))
+        _table_wrapper(table)
+        table.inner_row_border = True
+        click.echo(table.table)
+        click.echo("\n")
+
     click.echo(
         "Use "
         + click.style("cci task info <task_name>", bold=True)
@@ -1132,12 +1143,18 @@ task.add_command(task_run)
 @click.command(name="list", help="List available flows for the current context")
 @pass_config(load_keychain=False)
 def flow_list(config):
-    data = []
-    headers = ["flow", "description"]
-    for flow in config.project_config.list_flows():
-        data.append((flow["name"], flow["description"]))
-    table = Table(data, headers)
-    click.echo(table)
+    data = [
+        [flow["name"], flow["description"]]
+        for flow in config.project_config.list_flows()
+    ]
+    data.insert(0, ["Name", "Description"])
+
+    # instantiate and configure a table
+    table = SingleTable(data)
+    table.inner_row_border = True
+    _table_wrapper(table)
+
+    click.echo(table.table)
     click.echo("")
     click.echo(
         "Use "
