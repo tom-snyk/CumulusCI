@@ -22,7 +22,7 @@ import click
 import pkg_resources
 import requests
 from plaintable import Table
-from terminaltables import SingleTable
+from terminaltables import AsciiTable, SingleTable
 from rst2ansi import rst2ansi
 from jinja2 import Environment
 from jinja2 import PackageLoader
@@ -979,10 +979,17 @@ org.add_command(org_scratch_delete)
 
 
 def _table_wrapper(table, index=1):
-    # query for column width and wrap text
+    """Query for column width and wrap text"""
     width = table.column_max_width(index)
     for row in table.table_data:
         row[index] = textwrap.fill(row[index], width) if row[index] is not None else ""
+
+
+def _legacy_table(data, title=None):
+    """Fallback for dumb terminals."""
+    table = AsciiTable(data, title)
+    table.inner_row_border = True
+    click.echo(table.table)
 
 
 @click.command(name="list", help="List available tasks for the current context")
@@ -999,12 +1006,16 @@ def task_list(config):
         )
 
     for group, tasks in task_groups.items():
+        title = click.style(group, bold=True, underline=True)
         data = [["Task", "Description"]]
         data.extend(sorted(tasks))
-        table = SingleTable(data, click.style(group, bold=True, underline=True))
+        table = SingleTable(data, title)
         _table_wrapper(table)
         table.inner_row_border = True
-        click.echo(table.table)
+        try:
+            click.echo(table.table)
+        except UnicodeEncodeError:
+            _legacy_table(table.table_data, title)
         click.echo("\n")
 
     click.echo(
@@ -1143,18 +1154,24 @@ task.add_command(task_run)
 @click.command(name="list", help="List available flows for the current context")
 @pass_config(load_keychain=False)
 def flow_list(config):
-    data = [
-        [flow["name"], flow["description"]]
-        for flow in config.project_config.list_flows()
-    ]
-    data.insert(0, ["Name", "Description"])
+    data = [["Name", "Description"]]
+    data.extend(
+        [
+            [flow["name"], flow["description"]]
+            for flow in config.project_config.list_flows()
+        ]
+    )
 
     # instantiate and configure a table
     table = SingleTable(data)
     table.inner_row_border = True
     _table_wrapper(table)
 
-    click.echo(table.table)
+    try:
+        click.echo(table.table)
+    except UnicodeEncodeError:
+        _legacy_table(table.table_data)
+
     click.echo("")
     click.echo(
         "Use "
