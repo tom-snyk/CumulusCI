@@ -12,7 +12,6 @@ import os
 import sys
 import webbrowser
 import code
-import textwrap
 import time
 
 from contextlib import contextmanager
@@ -21,8 +20,6 @@ from shutil import copyfile
 import click
 import pkg_resources
 import requests
-from plaintable import Table
-from terminaltables import AsciiTable, SingleTable
 from rst2ansi import rst2ansi
 from jinja2 import Environment
 from jinja2 import PackageLoader
@@ -43,6 +40,7 @@ from cumulusci.core.exceptions import TaskNotFoundError
 from cumulusci.core.utils import import_global
 from cumulusci.cli.config import CliRuntime
 from cumulusci.cli.config import get_installed_version
+from cumulusci.cli.ui import CliTable
 from cumulusci.utils import doc_task
 from cumulusci.utils import get_cci_upgrade_command
 from cumulusci.oauth.salesforce import CaptureSalesforceOAuth
@@ -585,22 +583,29 @@ project.add_command(project_dependencies)
 
 
 @click.command(name="list", help="List services available for configuration and use")
+@click.option("--plain", is_flag=True, help="Print the table using plain ascii.")
+@click.option("--json", "print_json", is_flag=True, help="Print a json string")
 @pass_config(allow_global_keychain=True)
-def service_list(config):
-    headers = ["service", "description", "is_configured"]
-    data = []
+def service_list(config, plain, print_json):
     services = (
         config.project_config.services
         if not config.is_global_keychain
         else config.global_config.services
     )
+    configured_services = config.keychain.list_services()
+
+    data = [["Name", "Description", "Configured"]]
     for serv, schema in services.items():
-        is_configured = ""
-        if serv in config.keychain.list_services():
-            is_configured = "* "
-        data.append((serv, schema["description"], is_configured))
-    table = Table(data, headers)
-    click.echo(table)
+        is_configured = serv in configured_services
+        data.append([serv, schema["description"], is_configured])
+
+    if print_json:
+        click.echo(json.dumps(data[1:]))
+        return None
+
+    table = CliTable(data, title="Services", wrap_cols=[1])
+    table.stringify_boolean_cols(2)
+    table.echo(plain)
 
 
 class ConnectServiceCommand(click.MultiCommand):
@@ -835,40 +840,46 @@ def org_info(config, org_name, print_json):
 
 
 @click.command(name="list", help="Lists the connected orgs for the current project")
+@click.option("--plain", is_flag=True, help="Print the table using plain ascii.")
 @pass_config
-def org_list(config):
-    data = []
-    headers = [
-        "org",
-        "default",
-        "scratch",
-        "days",
-        "expired",
-        "config_name",
-        "username",
-    ]
+def org_list(config, plain):
+    data = [["Org", "Default", "Scratch", "Days", "Expired", "Config", "Username"]]
     for org in config.project_config.keychain.list_orgs():
         org_config = config.project_config.keychain.get_org(org)
-        row = [org]
-        row.append("*" if org_config.default else "")
-        row.append("*" if org_config.scratch else "")
+
+        org_expired = org_config.scratch and org_config.expired
+        config_name = org_config.config_name if org_config.config_name else ""
+        username = org_config.config.get(
+            "username", org_config.userinfo__preferred_username
+        )
+        username = username if username else ""
         if org_config.days_alive:
-            row.append(
-                "{} of {}".format(org_config.days_alive, org_config.days)
+            org_days = (
+                "{}/{}".format(org_config.days_alive, org_config.days)
                 if org_config.scratch
                 else ""
             )
         else:
-            row.append(org_config.days if org_config.scratch else "")
-        row.append("*" if org_config.scratch and org_config.expired else "")
-        row.append(org_config.config_name if org_config.config_name else "")
-        username = org_config.config.get(
-            "username", org_config.userinfo__preferred_username
+            org_days = org_config.days if org_config.scratch else ""
+
+        data.append(
+            [
+                org,
+                org_config.default,
+                org_config.scratch,
+                org_days,
+                org_expired,
+                config_name,
+                username,
+            ]
         )
-        row.append(username if username else "")
-        data.append(row)
-    table = Table(data, headers)
-    click.echo(table)
+
+    wrap_cols = [-1] if not plain else None
+    table = CliTable(data, title="Orgs", wrap_cols=wrap_cols)
+    table.stringify_boolean_cols(
+        [data[0].index(col) for col in ["Default", "Scratch", "Expired"]]
+    )
+    table.echo(plain)
 
 
 @click.command(name="remove", help="Removes an org from the keychain")
@@ -978,45 +989,29 @@ org.add_command(org_scratch_delete)
 # Commands for group: task
 
 
-def _table_wrapper(table, index=1):
-    """Query for column width and wrap text"""
-    width = table.column_max_width(index)
-    for row in table.table_data:
-        row[index] = textwrap.fill(row[index], width) if row[index] is not None else ""
-
-
-def _legacy_table(data, title=None):
-    """Fallback for dumb terminals."""
-    table = AsciiTable(data, title)
-    table.inner_row_border = True
-    click.echo(table.table)
-
-
 @click.command(name="list", help="List available tasks for the current context")
+@click.option("--plain", is_flag=True, help="Print the table using plain ascii.")
+@click.option("--json", "print_json", is_flag=True, help="Print a json string")
 @pass_config(load_keychain=False)
-def task_list(config):
+def task_list(config, plain, print_json):
     task_groups = OrderedDict()
 
     for task in config.project_config.list_tasks():
         group = task["group"] or "Other"
         if group not in task_groups:
             task_groups[group] = []
-        task_groups[group].append(
-            [click.style(task["name"], underline=True), task["description"]]
-        )
+        task_groups[group].append([task["name"], task["description"]])
+
+    if print_json:
+        click.echo(json.dumps(task_groups))
+        return None
 
     for group, tasks in task_groups.items():
         title = click.style(group, bold=True, underline=True)
         data = [["Task", "Description"]]
         data.extend(sorted(tasks))
-        table = SingleTable(data, title)
-        _table_wrapper(table)
-        table.inner_row_border = True
-        try:
-            click.echo(table.table)
-        except UnicodeEncodeError:
-            _legacy_table(table.table_data, title)
-        click.echo("\n")
+        table = CliTable(data, group, wrap_cols=[1])
+        table.echo(plain)
 
     click.echo(
         "Use "
@@ -1152,8 +1147,14 @@ task.add_command(task_run)
 
 
 @click.command(name="list", help="List available flows for the current context")
+@click.option("--plain", is_flag=True, help="Print the table using plain ascii.")
+@click.option("--json", "print_json", is_flag=True, help="Print a json string")
 @pass_config(load_keychain=False)
-def flow_list(config):
+def flow_list(config, plain, print_json):
+    if print_json:
+        click.echo(json.dumps(config.project_config.list_flows()))
+        return None
+
     data = [["Name", "Description"]]
     data.extend(
         [
@@ -1162,15 +1163,8 @@ def flow_list(config):
         ]
     )
 
-    # instantiate and configure a table
-    table = SingleTable(data)
-    table.inner_row_border = True
-    _table_wrapper(table)
-
-    try:
-        click.echo(table.table)
-    except UnicodeEncodeError:
-        _legacy_table(table.table_data)
+    table = CliTable(data, title="Flows", wrap_cols=[1])
+    table.echo(plain=plain)
 
     click.echo("")
     click.echo(
