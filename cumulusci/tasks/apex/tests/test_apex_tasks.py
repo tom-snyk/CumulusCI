@@ -21,14 +21,12 @@ from cumulusci.core.keychain import BaseProjectKeychain
 from cumulusci.core.exceptions import (
     ApexCompilationException,
     ApexException,
-    ApexTestException,
     SalesforceException,
     TaskOptionsError,
 )
 from cumulusci.tasks.apex.anon import AnonymousApexTask
 from cumulusci.tasks.apex.batch import BatchApexWait
 from cumulusci.tasks.apex.testrunner import RunApexTests
-from cumulusci.utils import temporary_dir
 
 
 @patch(
@@ -204,7 +202,7 @@ class TestRunApexTests(unittest.TestCase):
         self._mock_tests_complete()
         self._mock_get_test_results("Fail")
         task = RunApexTests(self.project_config, self.task_config, self.org_config)
-        with self.assertRaises(ApexTestException):
+        with self.assertRaises(SystemExit):
             task()
 
     def test_get_namespace_filter__managed(self):
@@ -217,7 +215,7 @@ class TestRunApexTests(unittest.TestCase):
         task_config = TaskConfig({"options": {"managed": True}})
         task = RunApexTests(self.project_config, task_config, self.org_config)
         with self.assertRaises(TaskOptionsError):
-            namespace = task._get_namespace_filter()
+            task._get_namespace_filter()
 
     def test_get_test_class_query__exclude(self):
         task_config = TaskConfig(

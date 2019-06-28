@@ -7,9 +7,10 @@ standard_library.install_aliases()
 import html
 import io
 import json
+import sys
 
 from cumulusci.tasks.salesforce import BaseSalesforceApiTask
-from cumulusci.core.exceptions import TaskOptionsError, ApexTestException
+from cumulusci.core.exceptions import TaskOptionsError
 from cumulusci.core.utils import process_bool_arg, decode_to_unicode
 
 APEX_LIMITS = {
@@ -321,7 +322,7 @@ class RunApexTests(BaseSalesforceApiTask):
         test_results = self._get_test_results()
         self._write_output(test_results)
         if self.counts.get("Fail") or self.counts.get("CompileFail"):
-            raise ApexTestException(
+            raise sys.exit(
                 "{} tests failed and {} tests failed compilation".format(
                     self.counts.get("Fail"), self.counts.get("CompileFail")
                 )
