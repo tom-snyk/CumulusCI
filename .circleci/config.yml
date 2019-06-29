@@ -27,30 +27,6 @@ jobs:
           command: |
             venv/bin/black --check --diff .
 
-  test_py2:
-    <<: *defaults
-    docker:
-      - image: circleci/python:2.7-browsers
-    steps:
-      - checkout
-      - run:
-          name: Install Python dependencies
-          command: |
-            virtualenv venv
-            venv/bin/pip install tox
-      - run:
-          name: Run Python tests
-          command: |
-            mkdir -p testresults/py2
-            venv/bin/tox -e py27 -- --junitxml=testresults/py2/junit.xml
-            mv .coverage .coverage.py2
-      - store_test_results:
-          path: testresults
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .coverage.py2
-
   test_py3:
     <<: *defaults
     steps:
@@ -216,13 +192,11 @@ workflows:
   build_test_report:
     jobs:
       - lint
-      - test_py2
       - test_py3
       - test_robot
       - test_release
       - report:
           requires:
-            - test_py2
             - test_py3
             - test_robot
             - test_release

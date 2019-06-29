@@ -1,10 +1,3 @@
-from __future__ import print_function
-from __future__ import unicode_literals
-from future import standard_library
-
-standard_library.install_aliases()
-from builtins import str
-from builtins import object
 from http.server import BaseHTTPRequestHandler
 from http.server import HTTPServer
 import http.client

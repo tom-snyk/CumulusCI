@@ -6,7 +6,6 @@ click==7.0
 coloredlogs==10.0
 cryptography==2.7
 docutils==0.14
-future==0.17.1
 github3.py==1.3.0
 humanfriendly==4.18
 jinja2==2.10.1

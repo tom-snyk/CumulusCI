@@ -7,11 +7,6 @@ based on mrbelvedere/mpinstaller/mdapi.py
 #   - add docstrings
 #   - look at https://github.com/rholder/retrying
 
-from __future__ import unicode_literals
-from builtins import str
-from future import standard_library
-
-standard_library.install_aliases()
 import base64
 
 import http.client

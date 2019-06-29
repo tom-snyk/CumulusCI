@@ -1,18 +1,8 @@
-from future import standard_library
-
-standard_library.install_aliases()
-import ast
 import http.client
-import os
-import shutil
-import tempfile
 import unittest
 
-import requests
 import responses
 
-from datetime import datetime
-from datetime import timedelta
 from testfixtures import LogCapture
 from github3 import GitHubError
 
@@ -164,10 +154,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         self._mock_pulls()
         branches = [other_branch]
         branches = self._mock_branches(branches)
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -193,10 +183,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         self._mock_compare(
             base=branches[1]["name"], head=self.project_config.repo_commit
         )
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -222,10 +212,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
             files=[{"filename": "test.txt"}],
         )
         self._mock_merge()
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -251,7 +241,7 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
             files=[{"filename": "test.txt"}],
         )
         self._mock_merge(http.client.INTERNAL_SERVER_ERROR)
-        with LogCapture() as l:
+        with LogCapture():
             task = self._create_task()
             with self.assertRaises(GitHubError):
                 task()
@@ -272,10 +262,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         )
         self._mock_merge(http.client.CONFLICT)
         self._mock_pull_create(1, 2)
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -312,10 +302,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         )
         self._mock_merge(http.client.CONFLICT)
 
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -356,10 +346,10 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         self._mock_merge(http.client.CONFLICT)
         # create PR
         self._mock_pull_create(1, 2)
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
         expected = [
             ("INFO", "Beginning task: MergeBranch"),
             ("INFO", ""),
@@ -398,11 +388,11 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
         merges = []
         merges.append(self._mock_merge())
 
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task()
             task()
 
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -448,7 +438,7 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
             base=branches[3]["name"], head=self.project_config.repo_commit, files=[]
         )
 
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task(
                 task_config={
                     "options": {
@@ -459,7 +449,7 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
             )
             task()
 
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),
@@ -499,7 +489,7 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
 
         self._mock_pulls()
 
-        with LogCapture() as l:
+        with LogCapture() as log:
             task = self._create_task(
                 task_config={
                     "options": {
@@ -510,7 +500,7 @@ class TestMergeBranch(unittest.TestCase, GithubApiTestMixin):
             )
             task()
 
-            log_lines = self._get_log_lines(l)
+            log_lines = self._get_log_lines(log)
 
             expected = [
                 ("INFO", "Beginning task: MergeBranch"),

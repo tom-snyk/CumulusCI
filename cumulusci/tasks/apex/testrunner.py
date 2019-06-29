@@ -1,16 +1,8 @@
 """ CumulusCI Tasks for running Apex Tests """
 
-from builtins import str
-from future import standard_library
-
-standard_library.install_aliases()
 import html
 import io
-import cgi
 import json
-import http.client
-
-from simple_salesforce import SalesforceGeneralError
 
 from cumulusci.tasks.salesforce import BaseSalesforceApiTask
 from cumulusci.core.exceptions import TaskOptionsError, ApexTestException
@@ -70,12 +62,12 @@ TEST_RESULT_QUERY = """
 SELECT Id,ApexClassId,TestTimestamp,
        Message,MethodName,Outcome,
        RunTime,StackTrace,
-       (SELECT 
+       (SELECT
           Id,Callouts,AsyncCalls,DmlRows,Email,
           LimitContext,LimitExceptions,MobilePush,
-          QueryRows,Sosl,Cpu,Dml,Soql 
-        FROM ApexTestResults) 
-FROM ApexTestResult 
+          QueryRows,Sosl,Cpu,Dml,Soql
+        FROM ApexTestResults)
+FROM ApexTestResult
 WHERE AsyncApexJobId='{}'
 """
 

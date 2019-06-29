@@ -1,8 +1,3 @@
-from __future__ import absolute_import
-from future import standard_library
-
-standard_library.install_aliases()
-from past.builtins import basestring
 from builtins import str
 from collections import defaultdict
 from collections import OrderedDict
@@ -146,7 +141,7 @@ def render_recursive(data, indent=None):
         render_recursive(data.config)
     elif isinstance(data, list):
         for item in data:
-            if isinstance(item, basestring):
+            if isinstance(item, (bytes, str)):
                 click.echo("{}- {}".format(indent_str, item))
             else:
                 click.echo("{}-".format(indent_str))
