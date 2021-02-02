@@ -4,21 +4,21 @@ cffi==1.12.3
 chardet==3.0.4
 click==7.0
 coloredlogs==10.0
-cryptography==2.7
+cryptography==3.2
 docutils==0.14  # pyup: <0.15
 future==0.17.1
 github3.py==1.3.0
 humanfriendly==4.18
-jinja2==2.10.1
+jinja2==2.11.3
 jwcrypto==0.6.0
 keyring==18.0.1  # pyup: <19
-lxml==4.3.4
+lxml==4.6.2
 MarkupSafe==1.1.1
 plaintable==0.1.1
 pycparser==2.19
 python-dateutil==2.8.0
 pytz==2019.1
-PyYAML==5.1.1
+PyYAML==5.2
 raven==6.10.0
 requests[security]==2.22.0
 robotframework==3.1.2
@@ -29,8 +29,8 @@ sarge==0.1.5.post0
 selenium==3.141.0
 simple-salesforce==0.74.3
 six==1.12.0
-SQLAlchemy==1.3.6
+SQLAlchemy==1.3.19
 unicodecsv==0.14.1
 uritemplate==3.0.0
-urllib3==1.25.3
+urllib3==1.25.9
 xmltodict==0.12.0
